@@ -150,9 +150,7 @@ for i, cat in enumerate(categories):
             img_idx = j * 4 + k
             img_id = str(uuid.uuid4())[:6]
             img = Image.open(
-                BytesIO(
-                    base64.b64decode(response.json()["output"][k].split(",")[1])
-                )
+                BytesIO(base64.b64decode(response.json()["output"][k].split(",")[1]))
             )
             img = img.resize((224, 224))
             if img_idx < args.dataset_split * num_examples_per_category:
@@ -177,12 +175,10 @@ else:
             "-p",
             "5000:5000",
             "--gpus=all",
-            # "-v",
-            # "/home/oop/dev/data/sdxl/sdxl-cache:/src/sdxl-cache",
-            # "-v",
-            # "/home/oop/dev/data/sdxl/safety-cache:/src/safety-cache",
-            # "-v",
-            # "/home/oop/dev/data/sdxl/refiner-cache:/src/refiner-cache",
+            "-v",
+            "/home/oop/dev/data/llava-v1.6-mistral-7b/:/src/liuhaotian/llava-v1.6-mistral-7b/",
+            "-v",
+            "/home/oop/dev/data/clip-vit-large-patch14-336:/src/openai/clip-vit-large-patch14-336"
             "r8.im/yorickvp/llava-v1.6-mistral-7b@sha256:4798da673efa7bc088aa046c2d5382d0c8b4fad971c828c3740d44feb7cbb471",
         ],
     )
@@ -200,7 +196,7 @@ else:
                     "top_p": 1,
                     "prompt": "What is unusual about this image?",
                     "max_tokens": 1024,
-                    "temperature": 0.2
+                    "temperature": 0.2,
                 }
             },
         )
@@ -209,4 +205,3 @@ else:
     if llava_docker_proc is not None:
         llava_docker_proc.terminate()
         os.system("docker kill $(docker ps -aq) && docker rm $(docker ps -aq)")
-    
