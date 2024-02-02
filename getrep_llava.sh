@@ -16,3 +16,4 @@ docker cp $DOCKER_ID:/src/liuhaotian/llava-v1.6-mistral-7b/model.safetensors.ind
 docker cp $DOCKER_ID:/src/liuhaotian/llava-v1.6-mistral-7b/special_tokens_map.json "$DATA_DIR/llava-v1.6-mistral-7b/special_tokens_map.json"
 docker cp $DOCKER_ID:/src/liuhaotian/llava-v1.6-mistral-7b/tokenizer.model "$DATA_DIR/llava-v1.6-mistral-7b/tokenizer.model"
 docker cp $DOCKER_ID:/src/liuhaotian/llava-v1.6-mistral-7b/tokenizer_config.json "$DATA_DIR/llava-v1.6-mistral-7b/tokenizer_config.json"
+# docker run --rm -p 5000:5000 --gpus=all -v /home/oop/dev/data/llava-v1.6-mistral-7b/:/src/liuhaotian/llava-v1.6-mistral-7b/ -v /home/oop/dev/data/clip-vit-large-patch14-336:/src/openai/clip-vit-large-patch14-336 r8.im/yorickvp/llava-v1.6-mistral-7b@sha256:4798da673efa7bc088aa046c2d5382d0c8b4fad971c828c3740d44feb7cbb471
