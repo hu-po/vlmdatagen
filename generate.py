@@ -19,7 +19,20 @@ parser.add_argument("--dataset_split", type=float, default=0.8)
 parser.add_argument("--llm", type=str, default="gpt")
 args = parser.parse_args()
 
+dataset_id = str(uuid.uuid4())[:6]
+print(f"No data directory specified, generating new dataset {dataset_id}")
+data_dir = os.path.join(args.base_dir, f"data.{dataset_id}")
+os.makedirs(data_dir, exist_ok=True)
+print(f"data directory at {data_dir}")
+train_dir = os.path.join(data_dir, "train")
+os.makedirs(train_dir, exist_ok=True)
+print(f"train directory at {train_dir}")
+test_dir = os.path.join(data_dir, "test")
+os.makedirs(test_dir, exist_ok=True)
+print(f"test directory at {test_dir}")
 
+
+# -------------- LLM
 if args.llm == "gpt":
     # https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo
     from openai import OpenAI
@@ -60,17 +73,7 @@ elif args.llm == "codellama":
         return output
 
 
-dataset_id = str(uuid.uuid4())[:6]
-print(f"No data directory specified, generating new dataset {dataset_id}")
-data_dir = os.path.join(args.base_dir, f"data.{dataset_id}")
-os.makedirs(data_dir, exist_ok=True)
-print(f"data directory at {data_dir}")
-train_dir = os.path.join(data_dir, "train")
-os.makedirs(train_dir, exist_ok=True)
-print(f"train directory at {train_dir}")
-test_dir = os.path.join(data_dir, "test")
-os.makedirs(test_dir, exist_ok=True)
-print(f"test directory at {test_dir}")
+
 # Use llm to generate categories
 unique_categories = set()
 while len(unique_categories) < args.num_categories:
@@ -88,7 +91,8 @@ These words will be used as classes for an image classification task.
         64,
     )
     unique_categories.update(set([_.lower() for _ in reply.split(",")]))
-# Check if Docker is already running
+
+# -------------- SDXL
 docker_ps_process = subprocess.Popen(["docker", "ps"], stdout=subprocess.PIPE)
 docker_ps_output, _ = docker_ps_process.communicate()
 if "sdxl" in docker_ps_output.decode():
@@ -152,7 +156,7 @@ for i, cat in enumerate(categories):
             img = Image.open(
                 BytesIO(base64.b64decode(response.json()["output"][k].split(",")[1]))
             )
-            img = img.resize((224, 224))
+            img = img.resize((336, 336))
             if img_idx < args.dataset_split * num_examples_per_category:
                 img.save(os.path.join(train_dir, cat, f"{img_id}.png"))
             else:
@@ -162,6 +166,7 @@ if sdxl_docker_proc is not None:
     os.system("docker kill $(docker ps -aq) && docker rm $(docker ps -aq)")
 
 
+# -------------- LLaVA
 if "llava" in docker_ps_output.decode():
     print(f"Docker for LLaVA is already running: {docker_ps_output.decode()}")
     llava_docker_proc = None
@@ -184,24 +189,28 @@ else:
     )
     time.sleep(30)  # Let the docker container startup
 
-    for image in images:
-        with open("/tmp/image.jpg", "rb") as f:
-            base64_image = base64.b64encode(f.read()).decode("utf-8")
-        response = requests.post(
-            "http://localhost:5000/predictions",
-            headers={"Content-Type": "application/json"},
-            json={
-                "input": {
-                    "image": f"data:image/jpeg;base64,{base64_image}",
-                    "top_p": 1,
-                    "prompt": "What is unusual about this image?",
-                    "max_tokens": 1024,
-                    "temperature": 0.2,
-                }
-            },
-        )
-        output = response.json()["output"][0]
-        print(output)
-    if llava_docker_proc is not None:
-        llava_docker_proc.terminate()
-        os.system("docker kill $(docker ps -aq) && docker rm $(docker ps -aq)")
+
+# TODO: What is the standard format for VLM datasets? one big json/yaml and then images? or one json/yaml per image?
+for image_path in 
+    
+    image_path = os.path.join()
+    with open(image_path, "rb") as f:
+        base64_image = base64.b64encode(f.read()).decode("utf-8")
+    response = requests.post(
+        "http://localhost:5000/predictions",
+        headers={"Content-Type": "application/json"},
+        json={
+            "input": {
+                "image": f"data:image/jpeg;base64,{base64_image}",
+                "top_p": 1,
+                "prompt": vlm_prompt,
+                "max_tokens": 1024,
+                "temperature": 0.2,
+            }
+        },
+    )
+    output = response.json()["output"][0]
+    print(output)
+if llava_docker_proc is not None:
+    llava_docker_proc.terminate()
+    os.system("docker kill $(docker ps -aq) && docker rm $(docker ps -aq)")
