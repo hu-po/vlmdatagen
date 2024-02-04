@@ -30,6 +30,8 @@ Vision Encoder
 CLIP + DINO visual encoders as quantized as possible. Can these be distilled as well?
 https://huggingface.co/openai/clip-vit-large-patch14-336
 https://huggingface.co/facebook/dinov2-base
+quantized mobile SAM
+https://github.com/ChaoningZhang/MobileSAM
 
 3 stage training pipeline
 MoE split over 2x1080GPUs
