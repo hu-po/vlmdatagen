@@ -8,7 +8,8 @@ import requests
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
-parser.add_argument("--data_dir", type=str, default=None)
+# parser.add_argument("--data_dir", type=str, default=None)
+parser.add_argument("--data_dir", type=str, default="/home/oop/dev/data/vlmgen.bd254b")
 parser.add_argument("--base_dir", type=str, default="/home/oop/dev/data")
 parser.add_argument("--llm", type=str, default="gpt")
 args = parser.parse_args()
@@ -21,7 +22,7 @@ elif args.llm == "rep":
     llm: callable = import_rep()
 else:
     raise ValueError(f"Unknown llm {args.llm}")
-if args.data_dir:
+if args.data_dir is None:
     dataset_id = str(uuid.uuid4())[:6]
     print(f"No data directory specified, generating new dataset {dataset_id}")
     data_dir = os.path.join(args.base_dir, f"vlmgen.{dataset_id}")
@@ -51,9 +52,9 @@ else:
             "5000:5000",
             "--gpus=all",
             "-v",
-            "/home/oop/dev/data/llava-v1.6-mistral-7b/:/src/liuhaotian/llava-v1.6-mistral-7b/",
+            "/home/oop/dev/data/llava-v1.6-mistral-7b:/src/liuhaotian/llava-v1.6-mistral-7b",
             "-v",
-            "/home/oop/dev/data/clip-vit-large-patch14-336:/src/openai/clip-vit-large-patch14-336"
+            "/home/oop/dev/data/clip-vit-large-patch14-336:/src/openai/clip-vit-large-patch14-336",
             "r8.im/yorickvp/llava-v1.6-mistral-7b@sha256:4798da673efa7bc088aa046c2d5382d0c8b4fad971c828c3740d44feb7cbb471",
         ],
     )
@@ -78,11 +79,9 @@ for _dir in (train_dir, test_dir):
                 }
             },
         )
-        output = response.json()["output"][0]
-        print(output)
         caption_filepath = os.path.join(_dir, f"{img_id}.txt")
         with open(caption_filepath, "w") as f:
-            f.write(output)
+            f.write(''.join(response.json()["output"]))
 if llava_docker_proc is not None:
     llava_docker_proc.terminate()
     os.system("docker kill $(docker ps -aq) && docker rm $(docker ps -aq)")
