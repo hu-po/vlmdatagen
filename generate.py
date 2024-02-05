@@ -21,7 +21,7 @@ args = parser.parse_args()
 
 dataset_id = str(uuid.uuid4())[:6]
 print(f"No data directory specified, generating new dataset {dataset_id}")
-data_dir = os.path.join(args.base_dir, f"data.{dataset_id}")
+data_dir = os.path.join(args.base_dir, f"vlmgen.{dataset_id}")
 os.makedirs(data_dir, exist_ok=True)
 print(f"data directory at {data_dir}")
 train_dir = os.path.join(data_dir, "train")
@@ -74,23 +74,23 @@ elif args.llm == "codellama":
 
 
 
-# Use llm to generate categories
-unique_categories = set()
-while len(unique_categories) < args.num_categories:
-    reply = llm(
-        """
-You are a sampling machine that provides perfectly sampled words. 
-You provide samples from the distribution of semantic visual concepts. 
-Reply only with lowercase single words.
-        """,
-        """
-Return a comma separated list of 10 words with no spaces.
-These words will be used as classes for an image classification task. 
-        """,
-        1.2,
-        64,
-    )
-    unique_categories.update(set([_.lower() for _ in reply.split(",")]))
+# # Use llm to generate categories
+# unique_categories = set()
+# while len(unique_categories) < args.num_categories:
+#     reply = llm(
+#         """
+# You are a sampling machine that provides perfectly sampled words. 
+# You provide samples from the distribution of semantic visual concepts. 
+# Reply only with lowercase single words.
+#         """,
+#         """
+# Return a comma separated list of 10 words with no spaces.
+# These words will be used as classes for an image classification task. 
+#         """,
+#         1.2,
+#         64,
+#     )
+#     unique_categories.update(set([_.lower() for _ in reply.split(",")]))
 
 # -------------- SDXL
 docker_ps_process = subprocess.Popen(["docker", "ps"], stdout=subprocess.PIPE)
@@ -118,49 +118,42 @@ else:
         ],
     )
     time.sleep(30)  # Let the docker container startup
-# Limit the number of categories to the required amount
-categories = list(unique_categories)[: args.num_categories]
-print(f"Categories: {categories}")
-num_examples_per_category = args.dataset_size // args.num_categories
-for i, cat in enumerate(categories):
-    print(f"Generating images for category {cat}")
-    os.makedirs(os.path.join(train_dir, cat), exist_ok=True)
-    os.makedirs(os.path.join(test_dir, cat), exist_ok=True)
-    for j in range(num_examples_per_category // 4):  # SDXL does 4 images at a time
-        negative_prompt = categories[(i + 1) % len(categories)]
-        response = requests.post(
-            "http://localhost:5000/predictions",
-            headers={"Content-Type": "application/json"},
-            json={
-                "input": {
-                    "width": 768,
-                    "height": 768,
-                    "prompt": cat,
-                    "refine": "expert_ensemble_refiner",
-                    "scheduler": "K_EULER",
-                    "lora_scale": 0.6,
-                    "num_outputs": 4,
-                    "guidance_scale": 7.5,
-                    "apply_watermark": False,
-                    "high_noise_frac": 0.8,
-                    "negative_prompt": negative_prompt,
-                    "prompt_strength": 1.0,  # 0.8,
-                    "num_inference_steps": 8,  # 25,
-                    "disable_safety_checker": True,
-                }
-            },
+
+num_batches = args.dataset_size // 4
+for i in range(num_batches):
+    if i < num_batches * args.dataset_split:
+        _dir = train_dir
+    else:
+        _dir = test_dir
+    response = requests.post(
+        "http://localhost:5000/predictions",
+        headers={"Content-Type": "application/json"},
+        json={
+            "input": {
+                "width": 768,
+                "height": 768,
+                "prompt": "webcam image of a human striking a pose",
+                "refine": "expert_ensemble_refiner",
+                "scheduler": "K_EULER",
+                "lora_scale": 0.6,
+                "num_outputs": 4,
+                "guidance_scale": 7.5,
+                "apply_watermark": False,
+                "high_noise_frac": 0.8,
+                "negative_prompt": "drawing, art, illustration",
+                "prompt_strength": 1.0,  # 0.8,
+                "num_inference_steps": 8,  # 25,
+                "disable_safety_checker": True,
+            }
+        },
+    )
+    for k in range(4): # Generates 4 images at a time
+        img_id = str(uuid.uuid4())[:8]
+        img = Image.open(
+            BytesIO(base64.b64decode(response.json()["output"][k].split(",")[1]))
         )
-        for k in range(4):
-            img_idx = j * 4 + k
-            img_id = str(uuid.uuid4())[:6]
-            img = Image.open(
-                BytesIO(base64.b64decode(response.json()["output"][k].split(",")[1]))
-            )
-            img = img.resize((336, 336))
-            if img_idx < args.dataset_split * num_examples_per_category:
-                img.save(os.path.join(train_dir, cat, f"{img_id}.png"))
-            else:
-                img.save(os.path.join(test_dir, cat, f"{img_id}.png"))
+        img = img.resize((336, 336))
+        img.save(os.path.join(_dir, f"{img_id}.png"))
 if sdxl_docker_proc is not None:
     sdxl_docker_proc.terminate()
     os.system("docker kill $(docker ps -aq) && docker rm $(docker ps -aq)")
@@ -188,29 +181,31 @@ else:
         ],
     )
     time.sleep(30)  # Let the docker container startup
-
-
-# TODO: What is the standard format for VLM datasets? one big json/yaml and then images? or one json/yaml per image?
-for image_path in 
-    
-    image_path = os.path.join()
-    with open(image_path, "rb") as f:
-        base64_image = base64.b64encode(f.read()).decode("utf-8")
-    response = requests.post(
-        "http://localhost:5000/predictions",
-        headers={"Content-Type": "application/json"},
-        json={
-            "input": {
-                "image": f"data:image/jpeg;base64,{base64_image}",
-                "top_p": 1,
-                "prompt": vlm_prompt,
-                "max_tokens": 1024,
-                "temperature": 0.2,
-            }
-        },
-    )
-    output = response.json()["output"][0]
-    print(output)
+for _dir in (train_dir, test_dir):
+    for image_path in os.listdir(_dir):
+        if not image_path.endswith(".png"):
+            continue
+        img_id = image_path.split(".")[0]
+        with open(image_path, "rb") as f:
+            base64_image = base64.b64encode(f.read()).decode("utf-8")
+        response = requests.post(
+            "http://localhost:5000/predictions",
+            headers={"Content-Type": "application/json"},
+            json={
+                "input": {
+                    "image": f"data:image/jpeg;base64,{base64_image}",
+                    "top_p": 1,
+                    "prompt": "Describe the image",
+                    "max_tokens": 1024,
+                    "temperature": 0.2,
+                }
+            },
+        )
+        output = response.json()["output"][0]
+        print(output)
+        caption_filepath = os.path.join(_dir, f"{img_id}.txt")
+        with open(caption_filepath, "w") as f:
+            f.write(output)
 if llava_docker_proc is not None:
     llava_docker_proc.terminate()
     os.system("docker kill $(docker ps -aq) && docker rm $(docker ps -aq)")
