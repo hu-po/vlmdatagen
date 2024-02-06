@@ -4,6 +4,7 @@ import uuid
 import os
 import subprocess
 import time
+import random
 import requests
 
 from io import BytesIO
@@ -14,9 +15,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--data_dir", type=str, default=None)
 parser.add_argument("--base_dir", type=str, default="/home/oop/dev/data")
-parser.add_argument("--dataset_size", type=int, default=10)
+parser.add_argument("--dataset_size", type=int, default=640)
 parser.add_argument("--dataset_split", type=float, default=0.8)
 parser.add_argument("--llm", type=str, default="gpt")
+parser.add_argument("--num_prompts", type=int, default=64)
 args = parser.parse_args()
 
 if args.llm == "gpt":
@@ -28,7 +30,7 @@ elif args.llm == "rep":
 else:
     raise ValueError(f"Unknown llm {args.llm}")
 
-if args.data_dir:
+if args.data_dir is None:
     dataset_id = str(uuid.uuid4())[:6]
     print(f"No data directory specified, generating new dataset {dataset_id}")
     data_dir = os.path.join(args.base_dir, f"vlmgen.{dataset_id}")
@@ -43,23 +45,27 @@ test_dir = os.path.join(data_dir, "test")
 os.makedirs(test_dir, exist_ok=True)
 print(f"test directory at {test_dir}")
 
-# # Use llm to generate categories
-# unique_categories = set()
-# while len(unique_categories) < args.num_categories:
-#     reply = llm(
-#         """
-# You are a sampling machine that provides perfectly sampled words. 
-# You provide samples from the distribution of semantic visual concepts. 
-# Reply only with lowercase single words.
-#         """,
-#         """
-# Return a comma separated list of 10 words with no spaces.
-# These words will be used as classes for an image classification task. 
-#         """,
-#         1.2,
-#         64,
-#     )
-#     unique_categories.update(set([_.lower() for _ in reply.split(",")]))
+# Use llm to generate prompts
+prompts = set()
+while len(prompts) < args.num_prompts:
+    reply = llm(
+        """
+You are a data generator.
+You generate diverse data with a wide distribution.
+Reply with comma separated lowercase single words.
+Reply only with single words.
+Return a comma separated list of words.
+Do not use punctuation or capitalization.
+Return at least 10 words.
+        """,
+        """
+What are some food related words?
+        """,
+        1.6,
+        64,
+    )
+    prompts.update(set([_.lower() for _ in reply.split(",")]))
+prompts = random.sample(prompts, args.num_prompts)
 
 # -------------- SDXL
 docker_ps_process = subprocess.Popen(["docker", "ps"], stdout=subprocess.PIPE)
@@ -95,6 +101,7 @@ for i in range(num_batches):
         _dir = train_dir
     else:
         _dir = test_dir
+    _prompt = " ".join(random.sample(prompts, 2))
     response = requests.post(
         "http://localhost:5000/predictions",
         headers={"Content-Type": "application/json"},
@@ -102,7 +109,7 @@ for i in range(num_batches):
             "input": {
                 "width": 768,
                 "height": 768,
-                "prompt": "webcam image of a human striking a pose",
+                "prompt": _prompt,
                 "refine": "expert_ensemble_refiner",
                 "scheduler": "K_EULER",
                 "lora_scale": 0.6,
@@ -124,6 +131,10 @@ for i in range(num_batches):
         )
         img = img.resize((336, 336))
         img.save(os.path.join(_dir, f"{img_id}.png"))
+        print(f"Saved image {img_id}.png")
+        with open(os.path.join(_dir, f"{img_id}.txt"), "w") as f:
+            f.write(_prompt)
+    print(f"Batch {i+1}/{num_batches} done.")
 if sdxl_docker_proc is not None:
     sdxl_docker_proc.terminate()
     os.system("docker kill $(docker ps -aq) && docker rm $(docker ps -aq)")

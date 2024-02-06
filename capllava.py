@@ -9,7 +9,7 @@ import requests
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 # parser.add_argument("--data_dir", type=str, default=None)
-parser.add_argument("--data_dir", type=str, default="/home/oop/dev/data/vlmgen.bd254b")
+parser.add_argument("--data_dir", type=str, default="/home/oop/dev/data/vlmgen.3af1af")
 parser.add_argument("--base_dir", type=str, default="/home/oop/dev/data")
 parser.add_argument("--llm", type=str, default="gpt")
 args = parser.parse_args()
@@ -79,9 +79,16 @@ for _dir in (train_dir, test_dir):
                 }
             },
         )
+        print("Caption:", response.json()["output"])
         caption_filepath = os.path.join(_dir, f"{img_id}.txt")
-        with open(caption_filepath, "w") as f:
-            f.write(''.join(response.json()["output"]))
+        if os.path.exists(caption_filepath):
+            print(f"Appending vlm caption to {caption_filepath}")
+            with open(caption_filepath, "a") as f:
+                f.write('\n' + ''.join(response.json()["output"]))
+        else:
+            print(f"Writing vlm caption  to {caption_filepath}")
+            with open(caption_filepath, "w") as f:
+                f.write(''.join(response.json()["output"]))
 if llava_docker_proc is not None:
     llava_docker_proc.terminate()
     os.system("docker kill $(docker ps -aq) && docker rm $(docker ps -aq)")
