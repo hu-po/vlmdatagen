@@ -116,9 +116,9 @@ for i in range(num_batches):
                 "guidance_scale": 7.5,
                 "apply_watermark": False,
                 "high_noise_frac": 0.8,
-                "negative_prompt": "drawing, art, illustration",
-                "prompt_strength": 1.0,  # 0.8,
-                "num_inference_steps": 8,  # 25,
+                "negative_prompt": "blurred image, unrealistic colors, distracting backgrounds",
+                "prompt_strength": 0.8,
+                "num_inference_steps": 20,
                 "disable_safety_checker": True,
             }
         },
