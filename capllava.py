@@ -4,6 +4,7 @@ import uuid
 import os
 import subprocess
 import time
+import random
 import requests
 
 parser = argparse.ArgumentParser()
@@ -36,6 +37,8 @@ print(f"train directory at {train_dir}")
 test_dir = os.path.join(data_dir, "test")
 os.makedirs(test_dir, exist_ok=True)
 print(f"test directory at {test_dir}")
+random.seed(args.seed)
+print(f"Seed: {args.seed}")
 docker_ps_process = subprocess.Popen(["docker", "ps"], stdout=subprocess.PIPE)
 docker_ps_output, _ = docker_ps_process.communicate()    
 if "llava" in docker_ps_output.decode():

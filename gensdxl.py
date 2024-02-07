@@ -18,7 +18,7 @@ parser.add_argument("--base_dir", type=str, default="/home/oop/dev/data")
 parser.add_argument("--dataset_size", type=int, default=640)
 parser.add_argument("--dataset_split", type=float, default=0.8)
 parser.add_argument("--llm", type=str, default="gpt")
-parser.add_argument("--num_prompts", type=int, default=64)
+parser.add_argument("--num_prompts", type=int, default=36)
 args = parser.parse_args()
 
 if args.llm == "gpt":
@@ -44,27 +44,30 @@ print(f"train directory at {train_dir}")
 test_dir = os.path.join(data_dir, "test")
 os.makedirs(test_dir, exist_ok=True)
 print(f"test directory at {test_dir}")
+random.seed(args.seed)
+print(f"Seed: {args.seed}")
+
+# Read seed prompts from txt file
+seed_prompt_filepath = os.path.join(os.path.dirname(__file__), "seed_prompts.txt")
+with open(seed_prompt_filepath, "r") as f:
+    seed_prompts = f.readlines()
 
 # Use llm to generate prompts
-prompts = set()
+prompts = set(random.sample(seed_prompts, min(args.num_prompts, len(seed_prompts))))
 while len(prompts) < args.num_prompts:
     reply = llm(
         """
-You are a data generator.
-You generate diverse data with a wide distribution.
-Reply with comma separated lowercase single words.
-Reply only with single words.
-Return a comma separated list of words.
-Do not use punctuation or capitalization.
-Return at least 10 words.
+You generate prompts for a image diffusion model. 
+Given two sample prompts, generate a third prompt.
+The third prompt should try to vary from the two sample prompts.
+Use a different type of cuisine, or use different description words.
+Return only the third prompt.
         """,
-        """
-What are some food related words?
-        """,
+        "\n".join(random.sample(seed_prompts, 2)),
         1.6,
-        64,
+        128,
     )
-    prompts.update(set([_.lower() for _ in reply.split(",")]))
+    prompts.add(reply)
 prompts = random.sample(prompts, args.num_prompts)
 
 # -------------- SDXL
@@ -101,7 +104,7 @@ for i in range(num_batches):
         _dir = train_dir
     else:
         _dir = test_dir
-    _prompt = " ".join(random.sample(prompts, 2))
+    _prompt = random.choice(prompts)
     response = requests.post(
         "http://localhost:5000/predictions",
         headers={"Content-Type": "application/json"},
