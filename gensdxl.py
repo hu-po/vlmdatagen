@@ -13,7 +13,7 @@ from PIL import Image
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--data_dir", type=str, default=None)
-parser.add_argument("--dataset_size", type=int, default=64)
+parser.add_argument("--dataset_size", type=int, default=120)
 parser.add_argument("--dataset_split", type=float, default=0.8)
 parser.add_argument("--llm", type=str, default="gpt")
 parser.add_argument("--num_prompts", type=int, default=36)
