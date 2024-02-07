@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--data_dir", type=str, default=None)
 parser.add_argument("--base_dir", type=str, default="/home/oop/dev/data")
-parser.add_argument("--dataset_size", type=int, default=640)
+parser.add_argument("--dataset_size", type=int, default=64)
 parser.add_argument("--dataset_split", type=float, default=0.8)
 parser.add_argument("--llm", type=str, default="gpt")
 parser.add_argument("--num_prompts", type=int, default=36)
@@ -51,7 +51,7 @@ seed_prompt_filepath = os.path.join(os.path.dirname(__file__), "seed_prompts_gen
 with open(seed_prompt_filepath, "r") as f:
     seed_prompts = f.readlines()
 # Use llm to generate prompts
-prompts = set(random.sample(seed_prompts, min(args.num_prompts, len(seed_prompts))))
+prompts = random.choices(seed_prompts, k=args.num_prompts)
 while len(prompts) < args.num_prompts:
     reply = llm(
         """
@@ -65,7 +65,7 @@ Return only the third prompt.
         1.6,
         128,
     )
-    prompts.add(reply)
+    prompts.append(reply)
 
 # -------------- SDXL
 docker_ps_process = subprocess.Popen(["docker", "ps"], stdout=subprocess.PIPE)

@@ -9,9 +9,9 @@ import requests
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
-# parser.add_argument("--data_dir", type=str, default=None)
-parser.add_argument("--data_dir", type=str, default="/home/oop/dev/data/vlmgen.3af1af")
+parser.add_argument("--data_dir", type=str, default=None)
 parser.add_argument("--base_dir", type=str, default="/home/oop/dev/data")
+# parser.add_argument("--data_dir", type=str, default="/home/oop/dev/data/vlmgen.3af1af")
 parser.add_argument("--llm", type=str, default="gpt")
 parser.add_argument("--num_prompts", type=int, default=6)
 args = parser.parse_args()
@@ -45,7 +45,7 @@ seed_prompt_filepath = os.path.join(os.path.dirname(__file__), "seed_prompts_cap
 with open(seed_prompt_filepath, "r") as f:
     seed_prompts = f.readlines()
 # Use llm to generate prompts
-prompts = seed_prompts[:args.num_prompts]
+prompts = random.choices(seed_prompts, k=args.num_prompts)
 while len(prompts) < args.num_prompts:
     reply = llm(
         """
@@ -59,7 +59,7 @@ Return only the third prompt.
         1.6,
         128,
     )
-    prompts.add(reply)
+    prompts.append(reply)
 docker_ps_process = subprocess.Popen(["docker", "ps"], stdout=subprocess.PIPE)
 docker_ps_output, _ = docker_ps_process.communicate()    
 if "llava" in docker_ps_output.decode():
