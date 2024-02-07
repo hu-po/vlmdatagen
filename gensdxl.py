@@ -46,12 +46,10 @@ os.makedirs(test_dir, exist_ok=True)
 print(f"test directory at {test_dir}")
 random.seed(args.seed)
 print(f"Seed: {args.seed}")
-
 # Read seed prompts from txt file
-seed_prompt_filepath = os.path.join(os.path.dirname(__file__), "seed_prompts.txt")
+seed_prompt_filepath = os.path.join(os.path.dirname(__file__), "seed_prompts_gen.txt")
 with open(seed_prompt_filepath, "r") as f:
     seed_prompts = f.readlines()
-
 # Use llm to generate prompts
 prompts = set(random.sample(seed_prompts, min(args.num_prompts, len(seed_prompts))))
 while len(prompts) < args.num_prompts:
@@ -68,7 +66,6 @@ Return only the third prompt.
         128,
     )
     prompts.add(reply)
-prompts = random.sample(prompts, args.num_prompts)
 
 # -------------- SDXL
 docker_ps_process = subprocess.Popen(["docker", "ps"], stdout=subprocess.PIPE)

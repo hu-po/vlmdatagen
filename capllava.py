@@ -13,6 +13,7 @@ parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--data_dir", type=str, default="/home/oop/dev/data/vlmgen.3af1af")
 parser.add_argument("--base_dir", type=str, default="/home/oop/dev/data")
 parser.add_argument("--llm", type=str, default="gpt")
+parser.add_argument("--num_prompts", type=int, default=6)
 args = parser.parse_args()
 
 if args.llm == "gpt":
@@ -39,6 +40,26 @@ os.makedirs(test_dir, exist_ok=True)
 print(f"test directory at {test_dir}")
 random.seed(args.seed)
 print(f"Seed: {args.seed}")
+# Read seed prompts from txt file
+seed_prompt_filepath = os.path.join(os.path.dirname(__file__), "seed_prompts_cap.txt")
+with open(seed_prompt_filepath, "r") as f:
+    seed_prompts = f.readlines()
+# Use llm to generate prompts
+prompts = seed_prompts[:args.num_prompts]
+while len(prompts) < args.num_prompts:
+    reply = llm(
+        """
+You generate prompts for a vision language model. 
+Given two sample prompts, generate a third prompt.
+The third prompt should try to vary from the two sample prompts.
+Use a different words, but try to get the same point accross.
+Return only the third prompt.
+        """,
+        "\n".join(random.sample(seed_prompts, 2)),
+        1.6,
+        128,
+    )
+    prompts.add(reply)
 docker_ps_process = subprocess.Popen(["docker", "ps"], stdout=subprocess.PIPE)
 docker_ps_output, _ = docker_ps_process.communicate()    
 if "llava" in docker_ps_output.decode():
@@ -76,7 +97,7 @@ for _dir in (train_dir, test_dir):
                 "input": {
                     "image": f"data:image/jpeg;base64,{base64_image}",
                     "top_p": 1,
-                    "prompt": "Describe the image",
+                    "prompt": random.choice(prompts),
                     "max_tokens": 1024,
                     "temperature": 0.2,
                 }
