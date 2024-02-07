@@ -10,8 +10,6 @@ import requests
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--data_dir", type=str, default=None)
-parser.add_argument("--base_dir", type=str, default="/home/oop/dev/data")
-# parser.add_argument("--data_dir", type=str, default="/home/oop/dev/data/vlmgen.3af1af")
 parser.add_argument("--llm", type=str, default="gpt")
 parser.add_argument("--num_prompts", type=int, default=6)
 args = parser.parse_args()
@@ -27,7 +25,7 @@ else:
 if args.data_dir is None:
     dataset_id = str(uuid.uuid4())[:6]
     print(f"No data directory specified, generating new dataset {dataset_id}")
-    data_dir = os.path.join(args.base_dir, f"vlmgen.{dataset_id}")
+    data_dir = f"data_dir_{dataset_id}"
 else:
     data_dir = args.data_dir
 os.makedirs(data_dir, exist_ok=True)
